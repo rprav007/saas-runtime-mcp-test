@@ -24,7 +24,7 @@ variable "gcp_region" {
 variable "service_name" {
   description = "The name for the Cloud Run service for the MCP Toolbox."
   type        = string
-  default     = "toolbox" // Matches service name from gcloud command
+  default     = "new-toolbox" // Matches service name from gcloud command
 }
 
 variable "mcp_toolbox_image" {
@@ -88,20 +88,20 @@ resource "google_cloud_run_v2_service" "mcp_toolbox_service" {
 
       // Arguments passed to the container, matching the --args from gcloud command
       args = [
-        "--tools_file=/app/tools.yaml", // Path inside the container where tools.yaml will be mounted
+        "--tools-file=/app/tools.yaml", // Path inside the container where tools.yaml will be mounted
         "--address=0.0.0.0",            // Listen on all network interfaces
         "--port=8080"                   // Listen on port 8080
       ]
 
       // Mount the tools.yaml file from the secret volume
       // This corresponds to --set-secrets "/app/tools.yaml=tools:latest"
-      /*
+      
       volume_mounts {
         name       = "tools-config-volume" // Must match a volume name defined below
-        mount_path = "/app/tools.yaml"      // Mount path as specified in --set-secrets
-        read_only  = true                   // Mount as read-only
+        mount_path = "/app"      // Mount path as specified in --set-secrets
+        #read_only  = true                   // Mount as read-only
       }
-      */
+      
 
       // Optional: Configure resource requests and limits
       // resources {
@@ -111,12 +111,12 @@ resource "google_cloud_run_v2_service" "mcp_toolbox_service" {
       //   }
       // }
     }
-/*
+
     // Define the volume that sources data from Secret Manager
     volumes {
       name = "tools-config-volume" // Name for the volume, referenced in volume_mounts
       secret {
-        secret = google_secret_manager_secret.tools_yaml_secret.secret_id // ID of the secret (e.g., "tools")
+        secret = "tools" // ID of the secret (e.g., "tools")
         // Specify which version of the secret to use and how to map it
         // Cloud Run uses the "latest" version by default if a specific version isn't pinned here.
         // The gcloud command uses "tools:latest", so we reference the secret name directly.
@@ -124,10 +124,10 @@ resource "google_cloud_run_v2_service" "mcp_toolbox_service" {
           version = "latest"     // Explicitly use the latest version, matching gcloud behavior
           path    = "tools.yaml" // The filename inside the volume
         }
-        default_mode = 0o400 // Permissions for the mounted file (read-only for owner)
+        #default_mode = 0o400 // Permissions for the mounted file (read-only for owner)
       }
     }
-*/
+
     // VPC Access Configuration for Direct VPC Egress
     // Corresponds to --network and --subnet flags in gcloud command
     vpc_access {
@@ -152,10 +152,11 @@ resource "google_cloud_run_v2_service" "mcp_toolbox_service" {
   //   type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   //   percent = 100
   // }
-
+  /*
   depends_on = [
-    google_secret_manager_secret_version.tools_yaml_secret_version
+    #google_secret_manager_secret_version.tools_yaml_secret_version
   ]
+  */
 }
 
 // -----------------------------------------------------------------------------
@@ -184,12 +185,12 @@ output "mcp_toolbox_service_url" {
   description = "The URL of the deployed MCP Toolbox Cloud Run service."
   value       = google_cloud_run_v2_service.mcp_toolbox_service.uri
 }
-
+/*
 output "mcp_toolbox_secret_name_used" {
   description = "The name of the Secret Manager secret used for tools.yaml."
   value       = google_secret_manager_secret.tools_yaml_secret.secret_id // This will output the actual secret_id used.
 }
-
+*/
 output "cloud_run_service_account_used" {
   description = "The full email of the service account used by the Cloud Run service."
   value       = google_cloud_run_v2_service.mcp_toolbox_service.template[0].service_account
@@ -204,3 +205,5 @@ output "vpc_subnet_configured" {
   description = "The VPC subnetwork configured for Direct VPC Egress."
   value       = var.vpc_subnet_name
 }
+
+
